@@ -1,0 +1,42 @@
+name: Build Wear OS APK
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+      - name: Set up Android SDK
+        uses: actions/setup-android@v2
+        with:
+          sdk-version: '33.0.1'  
+          ndk-version: '25.2.9519655'  
+
+      - name: Configure Android SDK
+        run: echo "$HOME/.android/sdk/tools/bin:$HOME/.android/sdk/platform-tools:$HOME/.android/sdk/emulator" >> $GITHUB_PATH
+
+      - name: Set up environment variables
+        run: |
+          export PATH=$PATH:$HOME/.gradle/wrapper/dists
+          echo "GRADLE_USER_HOME=$RUNNER_TEMP" >> $GITHUB_PATH
+
+      - name: Build Wear OS APK
+        run: cd pokewatch && ./gradlew assembleWearDebug
+      
+      - name: Sign APK
+        run: jarsigner -verbose -keystore my-keystore.keystore -storepass my-store-password -keypass my-key-password -signedjar my-app-signed.apk my-app-unsigned.apk my-alias
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: wear-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
